@@ -1,15 +1,25 @@
 import { EmployeeData, ApiResponse } from "@/types/employee";
+import { generateRequestId, getUserId, getSessionId } from "@/lib/user-id";
 
 const API_URL = "https://servicehub.spacetextiles.net/parkingsystem/v1/Parking-tcs-employee-data/";
 const AUTH_TOKEN = "d74e48fa5689bf56d3b63cffcd20e7b4e7399488";
 
 export async function fetchEmployeeData(ecno: string): Promise<EmployeeData> {
     try {
+        // Generate unique identifiers for this request
+        const requestId = generateRequestId();
+        const userId = getUserId();
+        const sessionId = getSessionId();
+        
         const response = await fetch(API_URL, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Token ${AUTH_TOKEN}`,
+                // Add unique identifiers to prevent duplicates
+                "X-Request-ID": requestId,
+                "X-User-ID": userId,
+                "X-Session-ID": sessionId,
             },
             body: JSON.stringify({ ecno }),
         });

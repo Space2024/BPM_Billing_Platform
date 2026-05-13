@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { generateRequestId, getUserId, getSessionId } from "@/lib/user-id";
 
 export interface PincodeData {
   areas: string[];
@@ -46,8 +47,19 @@ export function usePincodeLookup(pincode: string) {
     setLoading(true);
     setError(null);
 
+    // Generate unique identifiers for this request
+    const requestId = generateRequestId();
+    const userId = getUserId();
+    const sessionId = getSessionId();
+
     fetch(`https://api.postalpincode.in/pincode/${pincode}`, {
       signal: controller.signal,
+      headers: {
+        // Add unique identifiers to prevent duplicates
+        "X-Request-ID": requestId,
+        "X-User-ID": userId,
+        "X-Session-ID": sessionId,
+      },
     })
       .then((r) => r.json())
       .then((json: PincodeApiResponse[]) => {
