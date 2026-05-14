@@ -11,7 +11,6 @@ import {
   UpdateBillingInfoInput,
   UpdateBillingInfoResult,
 } from "@/types/billing";
-import { generateRequestId, getUserId, getSessionId } from "@/lib/user-id";
 
 // ─── GraphQL Endpoint & Auth ───────────────────────────────────────────────────
 
@@ -27,11 +26,6 @@ async function gqlFetch<T>(
   variables?: Record<string, unknown>,
   options?: RequestInit
 ): Promise<T> {
-  // Generate unique identifiers for this request
-  const requestId = generateRequestId();
-  const userId = getUserId();
-  const sessionId = getSessionId();
-  
   const body = JSON.stringify({ query, variables });
 
   const res = await fetch(GQL_ENDPOINT, {
@@ -39,10 +33,6 @@ async function gqlFetch<T>(
     headers: {
       "Content-Type": "application/json",
       ...(GQL_TOKEN && { Authorization: `Bearer ${GQL_TOKEN}` }),
-      // Add unique identifiers to prevent duplicates
-      "X-Request-ID": requestId,
-      "X-User-ID": userId,
-      "X-Session-ID": sessionId,
     },
     body,
     cache: "no-store",

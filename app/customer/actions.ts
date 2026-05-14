@@ -25,10 +25,6 @@ import {
   UpdateBillingInfoResult,
 } from "@/types/billing";
 
-// Note: Server actions cannot directly access browser APIs like localStorage
-// The unique IDs are already added in the HTTP headers by the GraphQL fetch function
-// For additional tracking, we can add server-side request metadata
-
 // ─── Look up mobile number ────────────────────────────────────────────────────
 
 export async function lookupMobileAction(
