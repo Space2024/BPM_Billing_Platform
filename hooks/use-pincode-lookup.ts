@@ -56,9 +56,9 @@ export function usePincodeLookup(pincode: string) {
       signal: controller.signal,
       headers: {
         // Add unique identifiers to prevent duplicates
-        "X-Request-ID": requestId,
-        "X-User-ID": userId,
-        "X-Session-ID": sessionId,
+        // "X-Request-ID": requestId,
+        // "X-User-ID": userId,
+        // "X-Session-ID": sessionId,
       },
     })
       .then((r) => r.json())
