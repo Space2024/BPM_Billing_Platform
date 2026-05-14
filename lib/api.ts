@@ -17,9 +17,9 @@ export async function fetchEmployeeData(ecno: string): Promise<EmployeeData> {
                 "Content-Type": "application/json",
                 "Authorization": `Token ${AUTH_TOKEN}`,
                 // Add unique identifiers to prevent duplicates
-                "X-Request-ID": requestId,
-                "X-User-ID": userId,
-                "X-Session-ID": sessionId,
+                // "X-Request-ID": requestId,
+                // "X-User-ID": userId,
+                // "X-Session-ID": sessionId,
             },
             body: JSON.stringify({ ecno }),
         });
