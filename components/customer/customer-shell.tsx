@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   Download,
+  X,
 } from "lucide-react";
 
 import { lookupMobileAction, fetchTextilesBillingAction, fetchProxyImageBase64, resendOtpAction, updateBillingInfoAction } from "@/app/customer/actions";
@@ -63,6 +64,8 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
   const [pendingMembershipId, setPendingMembershipId] = useSessionState<string | null>("cs_pendingId", null);
   // For billing_pending update flow: diff payload to apply after OTP verify
   const [pendingUpdatePayload, setPendingUpdatePayload] = useSessionState<Record<string, string> | null>("cs_pendingPayload", null);
+  // For jewellery purchase confirmation popup
+  const [showJewelleryPopup, setShowJewelleryPopup] = useState(false);
 
   useEffect(() => {
     if (step === "existing_found" && lookupResult) {
@@ -139,8 +142,8 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
           setLookupResult(updatedData);
           setStep("existing_found");
         } else {
-          // Address missing -> ask for address update via crossover form
-          setStep("textiles_jewellery_cross");
+          // Address missing -> ask if purchasing jewellery first
+          setShowJewelleryPopup(true);
         }
       } else if (data.source === "billing_pending") {
         // ── Smart resumption for pending registrations ──────────────────────
@@ -212,7 +215,110 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
 
   if (step === "mobile_entry") {
     return (
-      <div className="space-y-5 max-w-md mx-auto w-full">
+      <>
+        {/* ── Jewellery Purchase Popup ─────────────────────────────────────────── */}
+        {showJewelleryPopup && (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+            style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(8px)" }}
+            onClick={() => setShowJewelleryPopup(false)}
+          >
+            <div
+              className="w-full max-w-sm rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-[0_32px_80px_-12px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Gradient header */}
+              <div
+                className="relative px-6 pt-6 pb-5 overflow-hidden"
+                style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #1a56db 60%, #1e40af 100%)" }}
+              >
+                <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-10" style={{ background: "radial-gradient(circle, white, transparent)" }} />
+                <div className="absolute bottom-0 -left-4 w-20 h-20 rounded-full opacity-10" style={{ background: "radial-gradient(circle, white, transparent)" }} />
+                <div className="relative flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)" }}>
+                      <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.6)" }}>Purchase Confirmation</p>
+                      <h3 className="text-lg font-bold text-white leading-tight mt-0.5">Purchasing Jewellery?</h3>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowJewelleryPopup(false)} className="p-1.5 rounded-full transition-colors mt-0.5 flex-shrink-0" style={{ background: "rgba(255,255,255,0.12)" }}>
+                    <X className="h-3.5 w-3.5 text-white" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="bg-white px-5 pt-4 pb-3 space-y-3">
+                {/* YES - Show Cross Form */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowJewelleryPopup(false);
+                    setStep("textiles_jewellery_cross");
+                  }}
+                  className="relative w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white text-left overflow-hidden transition-all duration-200 hover:shadow-[0_4px_24px_-4px_rgba(34,197,94,0.25)] hover:border-green-200 hover:-translate-y-0.5 group"
+                >
+                  <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-green-400 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center bg-green-50 group-hover:bg-green-600 transition-colors duration-200 shadow-sm">
+                    <CheckCircle2 className="h-6 w-6 text-green-600 group-hover:text-white transition-colors duration-200" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 group-hover:text-green-700 transition-colors">Yes, I am</p>
+                    <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">Complete jewellery registration</p>
+                  </div>
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-green-500 group-hover:bg-green-500 flex items-center justify-center transition-all duration-200">
+                    <svg className="h-3.5 w-3.5 text-transparent group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </button>
+
+                {/* NO - Show QR Code */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowJewelleryPopup(false);
+                    setStep("existing_found");
+                  }}
+                  className="relative w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-100 bg-white text-left overflow-hidden transition-all duration-200 hover:shadow-[0_4px_24px_-4px_rgba(29,78,216,0.25)] hover:border-blue-200 hover:-translate-y-0.5 group"
+                >
+                  <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gradient-to-b from-blue-400 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-50 group-hover:bg-blue-600 transition-colors duration-200 shadow-sm">
+                    <svg className="h-6 w-6 text-blue-600 group-hover:text-white transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 group-hover:text-blue-700 transition-colors">No, not today</p>
+                    <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">Show my membership details</p>
+                  </div>
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-blue-500 group-hover:bg-blue-500 flex items-center justify-center transition-all duration-200">
+                    <svg className="h-3.5 w-3.5 text-transparent group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </button>
+              </div>
+
+              {/* Trust footer */}
+              <div className="bg-white px-5 pb-5">
+                <div className="flex items-center justify-center gap-1.5 py-2 border-t border-slate-50">
+                  <svg className="h-3 w-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-[10px] text-slate-400 font-medium">Choose your preferred option</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-5 max-w-md mx-auto w-full">
         <div className="space-y-1">
          <h1 className="text-sm md:text-sm font-bold tracking-wide bg-gradient-to-r from-blue-700 via-blue-500 to-blue-900 bg-clip-text text-transparent drop-shadow-sm">
             Continue with Mobile Verification
@@ -271,6 +377,7 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
           )}
         </Button>
       </div>
+      </>
     );
   }
 
@@ -320,14 +427,14 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
       <div className="space-y-5 max-w-md mx-auto w-full">
         {/* Loyalty Note at the top (only for non-loyalty customers) */}
         {lookupResult.source !== "program_master" && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center shadow-sm">
-            <p className="text-xs font-medium text-blue-800 leading-relaxed">
-              <span className="font-bold">Note:</span> Join our Loyalty Program and get a welcome bonus up to ₹200 along with exclusive privileges and luxurious rewards. Become part of our Loyalty Circle today.{" "}
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-3 text-center shadow-md">
+            <p className="text-xs font-medium text-green-900 leading-relaxed">
+              <span className="font-bold bg-green-200 px-2 py-0.5 rounded text-green-900">Note:</span> Join our Loyalty Program and get a welcome bonus up to <span className="text-lg font-extrabold text-green-700 inline-block mx-0.5">₹200</span> along with exclusive privileges and luxurious rewards. Become part of our Loyalty Circle today.{" "}
               <a
                 href="https://www.blupeacock.in/Blupeacock-Membership-Account/join_membership"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-900 font-bold underline hover:underline"
+                className="text-green-700 font-extrabold underline decoration-2 underline-offset-2 hover:text-green-900 hover:decoration-green-900 transition-colors"
               >
                 Click here to join now
               </a>

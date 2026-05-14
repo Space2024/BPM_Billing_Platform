@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Crown, Star, Shield, Gem, ArrowLeft, Loader2, Download } from "lucide-react";
+import { Crown, Star, Shield, Gem, ArrowLeft, Loader2, Download, Verified } from "lucide-react";
 import { fetchProxyImageBase64 } from "@/app/customer/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,14 +100,14 @@ export function MembershipSuccessCard({ result, customerName, customerCity, onRe
   return (
     <div className="space-y-5">
       {/* Loyalty Note at the top */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-center shadow-sm">
-        <p className="text-xs font-medium text-blue-800 leading-relaxed">
-          <span className="font-bold">Note:</span> Join our Loyalty Program and get a welcome bonus up to ₹200 along with exclusive privileges and luxurious rewards. Become part of our Loyalty Circle today.{" "}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-3 text-center shadow-md">
+        <p className="text-xs font-medium text-green-900 leading-relaxed">
+          <span className="font-bold bg-green-200 px-2 py-0.5 rounded text-green-900">Note:</span> Join our Loyalty Program and get a welcome bonus up to <span className="text-lg font-extrabold text-green-700 inline-block mx-0.5">₹200</span> along with exclusive privileges and luxurious rewards. Become part of our Loyalty Circle today.{" "}
           <a
             href="https://www.blupeacock.in/Blupeacock-Membership-Account/join_membership"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-900 font-bold underline hover:underline"
+            className="text-green-700 font-extrabold underline decoration-2 underline-offset-2 hover:text-green-900 hover:decoration-green-900 transition-colors"
           >
             Click here to join now
           </a>
@@ -216,11 +216,12 @@ export function MembershipSuccessCard({ result, customerName, customerCity, onRe
               <HiddenMobile mobile={result.mobileNo ?? ""} iconClassName="hover:bg-white/20" />
             </div>
           </div>
-          {result.billingStatus && (
+          {/* {result.billingStatus && ( */}
             <Badge className="bg-white/10 border-white/20 text-white text-xs px-2 py-0.5 rounded-full uppercase tracking-wider">
-              {result.billingStatus}
+            Active Member
+              {/* {result.billingStatus} */}
             </Badge>
-          )}
+          {/*  )}*/}
         </div>
       </div>
 
