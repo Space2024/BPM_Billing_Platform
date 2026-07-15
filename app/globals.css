@@ -82,3 +82,101 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+
+/* ── Blupeacock welcome splash ────────────────────────────────────────────── */
+/* Palette is sampled from the logo: navy #2d2a6e + azure #1b9ad6, with a teal
+   #14b8a6 accent for the peacock iridescence. */
+
+@keyframes bp-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -18px, 0) scale(1.08);
+  }
+}
+
+@keyframes bp-eye-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes bp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.bp-aura {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  opacity: 0.72;
+  animation: bp-drift 14s ease-in-out infinite;
+}
+
+/* Sized in vmax, not vw: on a portrait phone vw is the *short* edge, which
+   shrinks these to specks in a tall viewport. vmax tracks the long edge, so the
+   aura reads at the same scale on mobile as on desktop. */
+.bp-aura-1 {
+  top: -12%;
+  left: -8%;
+  width: 46vmax;
+  height: 46vmax;
+  background: radial-gradient(circle, #1b9ad6, transparent 68%);
+}
+
+.bp-aura-2 {
+  right: -10%;
+  bottom: -18%;
+  width: 52vmax;
+  height: 52vmax;
+  background: radial-gradient(circle, #14b8a6, transparent 68%);
+  animation-delay: -5s;
+}
+
+.bp-aura-3 {
+  top: 18%;
+  right: 12%;
+  width: 34vmax;
+  height: 34vmax;
+  background: radial-gradient(circle, #2d2a6e, transparent 70%);
+  opacity: 0.45;
+  animation-delay: -9s;
+}
+
+/* A soft iridescent bloom behind the wordmark. Deliberately an ellipse tracking
+   the ~4:1 logo: a circle here spills past the mark and reads as a stray ring
+   colliding with the badge below it. */
+.bp-eye {
+  background:
+    radial-gradient(ellipse 52% 58% at 50% 50%, rgba(27, 154, 214, 0.24) 0%, rgba(255, 255, 255, 0) 70%),
+    radial-gradient(ellipse 38% 44% at 50% 50%, rgba(20, 184, 166, 0.16) 0%, rgba(255, 255, 255, 0) 72%);
+  filter: blur(8px);
+  animation: bp-eye-pulse 6s ease-in-out infinite;
+}
+
+.bp-rise {
+  animation: bp-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-aura,
+  .bp-eye,
+  .bp-rise {
+    animation: none;
+  }
+}
