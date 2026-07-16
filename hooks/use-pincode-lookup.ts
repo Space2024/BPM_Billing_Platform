@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { toTitleCase } from "@/lib/utils";
+
+const PINCODE_API_URL = "https://cust.spacetextiles.net/Postal-Code-List";
 
 export interface PincodeData {
   areas: string[];
@@ -14,15 +17,21 @@ interface PostOffice {
   Name: string;
   Block: string;
   District: string;
-  Division: string;
   State: string;
+  Circle: string;
+  Region: string;
+  Pincode: string;
   Country: string;
 }
 
 interface PincodeApiResponse {
+  Message: string;
   Status: string;
   PostOffice: PostOffice[] | null;
 }
+
+const titleCase = (value: string | null | undefined) =>
+  value ? toTitleCase(value) : "";
 
 export function usePincodeLookup(pincode: string) {
   const [loading, setLoading] = useState(false);
@@ -46,12 +55,17 @@ export function usePincodeLookup(pincode: string) {
     setLoading(true);
     setError(null);
 
-    fetch(`https://api.postalpincode.in/pincode/${pincode}`, {
+    fetch(PINCODE_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinCode: pincode }),
       signal: controller.signal,
     })
-      .then((r) => r.json())
-      .then((json: PincodeApiResponse[]) => {
-        const result = json[0];
+      .then((r) => {
+        if (!r.ok) throw new Error(`Request failed with status ${r.status}`);
+        return r.json();
+      })
+      .then((result: PincodeApiResponse) => {
         if (result?.Status !== "Success" || !result.PostOffice?.length) {
           setError("Pincode not found");
           setData(null);
@@ -60,11 +74,11 @@ export function usePincodeLookup(pincode: string) {
 
         const po = result.PostOffice[0];
         setData({
-          areas: result.PostOffice.map(p => p.Name || "").filter(Boolean),
-          taluk: po.Block || po.Division || "",
-          city: po.District || "",
-          state: po.State || "",
-          country: po.Country || "India",
+          areas: result.PostOffice.map((p) => titleCase(p.Name)).filter(Boolean),
+          taluk: titleCase(po.Block),
+          city: titleCase(po.District),
+          state: titleCase(po.State),
+          country: titleCase(po.Country) || "India",
         });
       })
       .catch((err) => {
