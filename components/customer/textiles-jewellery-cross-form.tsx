@@ -16,25 +16,29 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { toTitleCase } from "@/lib/utils";
+import { cn, toTitleCase, toTitleCaseSafe } from "@/lib/utils";
 import { AreaCombobox } from "@/components/customer/area-combobox";
 
 // ─── Field wrapper (matches registration-form style) ────────────────────────
 
 function Field({
-  id, label, required, error, children,
-}: { id: string; label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  id, label, required, error, hint, children,
+}: { id: string; label: string; required?: boolean; error?: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5 flex flex-col">
       <Label htmlFor={id} className="text-sm font-medium text-slate-700">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
       {children}
-      {error && (
-        <span className="text-[11px] text-red-500 font-medium leading-tight mt-0.5">
-          {error}
-        </span>
-      )}
+      {/* Always rendered: a message appearing must not resize the grid row */}
+      <span
+        className={cn(
+          "text-[11px] font-medium leading-tight min-h-[14px]",
+          error ? "text-red-500" : "text-amber-600"
+        )}
+      >
+        {error || hint}
+      </span>
     </div>
   );
 }
@@ -150,16 +154,21 @@ export function TextilesJewelleryCrossForm({
       if (err || !data?.success) {
         setError(err || "Failed to load customer details.");
       } else {
-        setTextilesData(data);
+        setTextilesData({
+          ...data,
+          prefix: toTitleCaseSafe(data.prefix),
+          firstName: toTitleCaseSafe(data.firstName),
+          lastName: toTitleCaseSafe(data.lastName),
+        });
         // Pre-fill all address fields from existing record
-        if (data.doorNo) setDoorNo(data.doorNo);
-        if (data.street) setStreet(data.street);
+        if (data.doorNo) setDoorNo(toTitleCaseSafe(data.doorNo));
+        if (data.street) setStreet(toTitleCaseSafe(data.street));
         if (data.pincode) setPincode(data.pincode);
-        if (data.area) setArea(data.area);
-        if (data.taluk) setTaluk(data.taluk);
-        if (data.city) setCity(data.city);
-        if (data.state) setState(data.state);
-        if (data.country) setCountry(data.country);
+        if (data.area) setArea(toTitleCaseSafe(data.area));
+        if (data.taluk) setTaluk(toTitleCaseSafe(data.taluk));
+        if (data.city) setCity(toTitleCaseSafe(data.city));
+        if (data.state) setState(toTitleCaseSafe(data.state));
+        if (data.country) setCountry(toTitleCaseSafe(data.country));
         // Auto-select jewellery store if already assigned
         if (data.jewStoreId) setSelectedJewStoreId(data.jewStoreId);
       }
@@ -358,7 +367,7 @@ export function TextilesJewelleryCrossForm({
             className={`h-10 ${touched.street && fieldErrors.street ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`}
           />
         </Field>
-        <Field id="jcf-pincode" label="Pincode" required error={touched.pincode ? fieldErrors.pincode : undefined}>
+        <Field id="jcf-pincode" label="Pincode" required error={touched.pincode ? fieldErrors.pincode : undefined} hint={pincodeError ?? undefined}>
           <div className="relative">
             <Input
               id="jcf-pincode"
@@ -379,7 +388,6 @@ export function TextilesJewelleryCrossForm({
               <MapPin className="absolute right-2.5 top-2.5 h-4 w-4 text-blue-500 animate-pulse" />
             )}
           </div>
-          {pincodeError && <p className="text-xs text-amber-600 mt-1">{pincodeError}</p>}
         </Field>
         <Field id="jcf-area" label="Area" required error={touched.area ? fieldErrors.area : undefined}>
           {availableAreas.length > 0 ? (

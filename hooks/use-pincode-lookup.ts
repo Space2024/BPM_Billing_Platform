@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { toTitleCase } from "@/lib/utils";
+import { toTitleCaseSafe } from "@/lib/utils";
 
 const PINCODE_API_URL = "https://cust.spacetextiles.net/Postal-Code-List";
 
@@ -29,9 +29,6 @@ interface PincodeApiResponse {
   Status: string;
   PostOffice: PostOffice[] | null;
 }
-
-const titleCase = (value: string | null | undefined) =>
-  value ? toTitleCase(value) : "";
 
 export function usePincodeLookup(pincode: string) {
   const [loading, setLoading] = useState(false);
@@ -66,6 +63,9 @@ export function usePincodeLookup(pincode: string) {
         return r.json();
       })
       .then((result: PincodeApiResponse) => {
+        // A superseded lookup must not write state the current one owns
+        if (controller.signal.aborted) return;
+
         if (result?.Status !== "Success" || !result.PostOffice?.length) {
           setError("Pincode not found");
           setData(null);
@@ -74,18 +74,19 @@ export function usePincodeLookup(pincode: string) {
 
         const po = result.PostOffice[0];
         setData({
-          areas: result.PostOffice.map((p) => titleCase(p.Name)).filter(Boolean),
-          taluk: titleCase(po.Block),
-          city: titleCase(po.District),
-          state: titleCase(po.State),
-          country: titleCase(po.Country) || "India",
+          areas: result.PostOffice.map((p) => toTitleCaseSafe(p.Name)).filter(Boolean),
+          taluk: toTitleCaseSafe(po.Block),
+          city: toTitleCaseSafe(po.District),
+          state: toTitleCaseSafe(po.State),
+          country: toTitleCaseSafe(po.Country) || "India",
         });
       })
       .catch((err) => {
-        if (err.name === "AbortError") return;
+        if (controller.signal.aborted || err.name === "AbortError") return;
         setError("Failed to fetch pincode details");
       })
       .finally(() => {
+        if (controller.signal.aborted) return;
         setLoading(false);
       });
 

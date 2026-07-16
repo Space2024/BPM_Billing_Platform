@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { toTitleCase } from "@/lib/utils";
+import { cn, toTitleCase, toTitleCaseSafe } from "@/lib/utils";
 import { AreaCombobox } from "@/components/customer/area-combobox";
 import {
   Select,
@@ -71,19 +71,23 @@ interface RegistrationFormProps {
 // ─── Field wrapper ──────────────────────────────────────────────────────────────
 
 function Field({
-  id, label, required, error, children,
-}: { id: string; label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  id, label, required, error, hint, children,
+}: { id: string; label: string; required?: boolean; error?: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5 flex flex-col">
       <Label htmlFor={id} className="text-sm font-medium text-slate-700">
         {label}{required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
       {children}
-      {error && (
-        <span className="text-[11px] text-red-500 font-medium leading-tight mt-0.5">
-          {error}
-        </span>
-      )}
+      {/* Always rendered: a message appearing must not resize the grid row */}
+      <span
+        className={cn(
+          "text-[11px] font-medium leading-tight min-h-[14px]",
+          error ? "text-red-500" : "text-amber-600"
+        )}
+      >
+        {error || hint}
+      </span>
     </div>
   );
 }
@@ -154,18 +158,18 @@ export function RegistrationForm({
       }
       if (initialData.customerName) {
         const parts = initialData.customerName.trim().split(" ");
-        const initFirstName = parts[0] || "";
-        const initLastName = parts.slice(1).join(" ") || "";
+        const initFirstName = toTitleCaseSafe(parts[0]);
+        const initLastName = toTitleCaseSafe(parts.slice(1).join(" "));
         if (initFirstName && !firstName) setFirstName(initFirstName);
         if (initLastName && !lastName) setLastName(initLastName);
       }
-      if (initialData.doorNo && !doorNo) setDoorNo(initialData.doorNo);
-      if (initialData.street && !street) setStreet(initialData.street);
+      if (initialData.doorNo && !doorNo) setDoorNo(toTitleCaseSafe(initialData.doorNo));
+      if (initialData.street && !street) setStreet(toTitleCaseSafe(initialData.street));
       if (initialData.pinCode && !pincode) setPincode(initialData.pinCode);
-      if (initialData.area && !area) setArea(initialData.area);
-      if (initialData.taluk && !taluk) setTaluk(initialData.taluk);
-      if (initialData.city && !city) setCity(initialData.city);
-      if (initialData.state && !state) setState(initialData.state);
+      if (initialData.area && !area) setArea(toTitleCaseSafe(initialData.area));
+      if (initialData.taluk && !taluk) setTaluk(toTitleCaseSafe(initialData.taluk));
+      if (initialData.city && !city) setCity(toTitleCaseSafe(initialData.city));
+      if (initialData.state && !state) setState(toTitleCaseSafe(initialData.state));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -410,7 +414,7 @@ export function RegistrationForm({
           <Input id="street" value={street} onChange={(e) => setStreet(toTitleCase(e.target.value))} onBlur={() => handleBlur("street")}
             disabled={loading} placeholder="Street / Road" className={`h-10 ${touched.street && fieldErrors.street ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`} />
         </Field>
-        <Field id="pincode" label="Pincode" required error={touched.pincode ? fieldErrors.pincode : undefined}>
+        <Field id="pincode" label="Pincode" required error={touched.pincode ? fieldErrors.pincode : undefined} hint={pincodeError ?? undefined}>
           <div className="relative">
             <Input id="pincode" value={pincode} inputMode="numeric"
               onChange={(e) => {
@@ -425,7 +429,6 @@ export function RegistrationForm({
               <MapPin className="absolute right-2.5 top-2.5 h-4 w-4 text-blue-500 animate-pulse" />
             )}
           </div>
-          {pincodeError && <p className="text-xs text-amber-600 mt-1">{pincodeError}</p>}
         </Field>
         <Field id="area" label="Area" required error={touched.area ? fieldErrors.area : undefined}>
           {availableAreas.length > 0 ? (
