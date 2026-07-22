@@ -122,22 +122,37 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
         // Fetch textiles info to reliably check if they already have an address
         const { data: texData } = await fetchTextilesBillingAction(mobile);
 
-        const hasAddress = !!(texData && texData.doorNo && texData.city);
+        // Never re-ask "Purchasing Jewellery?" to a customer who is already a
+        // jewellery customer. Two cases per the data model:
+        //   • Direct jewellery customer → store_type is Jewellery (jewStoreId
+        //     is empty for them). The lookup result carries store_type directly.
+        //   • Textiles customer who crossed over → store_type is Textiles and
+        //     jewStoreId is populated.
+        // Trim to guard against whitespace-only values that are truthy.
+        const isJewelleryType = !!data.storeType?.toLowerCase().includes("jewel");
+        const hasJewellery =
+          isJewelleryType ||
+          !!data.jewStoreId?.trim() ||
+          !!texData?.jewStoreId?.trim();
+        const hasAddress =
+          !!texData &&
+          !!texData.doorNo?.trim() &&
+          !!texData.city?.trim();
 
-        if (hasAddress) {
+        if (hasJewellery || hasAddress) {
           // If address is already filled, inject texData into lookupResult so the UI displays correctly
           const updatedData = { ...data };
           if (!updatedData.customer) {
             updatedData.customer = {
-              customerTitle: texData.prefix || "",
-              customerName: `${texData.firstName || ""} ${texData.lastName || ""}`.trim(),
+              customerTitle: texData?.prefix || "",
+              customerName: `${texData?.firstName || ""} ${texData?.lastName || ""}`.trim(),
               mobileNo: mobile,
-              doorNo: texData.doorNo || "",
-              city: texData.city || "",
-              status: texData.billingStatus || "PROCESSING"
+              doorNo: texData?.doorNo || "",
+              city: texData?.city || "",
+              status: texData?.billingStatus || "PROCESSING"
             } as any;
           } else {
-            updatedData.customer.city = texData.city || updatedData.customer.city;
+            updatedData.customer.city = texData?.city || updatedData.customer.city;
           }
           setLookupResult(updatedData);
           setStep("existing_found");
