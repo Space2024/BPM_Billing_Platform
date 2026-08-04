@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { cn, toTitleCase, toTitleCaseSafe } from "@/lib/utils";
+import { cn, toTitleCase, toTitleCaseSafe, formatName, formatAddressText, formatDoorNo } from "@/lib/utils";
 import { AreaCombobox } from "@/components/customer/area-combobox";
 import {
   Select,
@@ -158,14 +158,14 @@ export function RegistrationForm({
       }
       if (initialData.customerName) {
         const parts = initialData.customerName.trim().split(" ");
-        const initFirstName = toTitleCaseSafe(parts[0]);
-        const initLastName = toTitleCaseSafe(parts.slice(1).join(" "));
+        const initFirstName = formatName(parts[0]);
+        const initLastName = formatName(parts.slice(1).join(" "));
         if (initFirstName && !firstName) setFirstName(initFirstName);
         if (initLastName && !lastName) setLastName(initLastName);
       }
-      if (initialData.doorNo && !doorNo) setDoorNo(toTitleCaseSafe(initialData.doorNo));
-      if (initialData.street && !street) setStreet(toTitleCaseSafe(initialData.street));
-      if (initialData.pinCode && !pincode) setPincode(initialData.pinCode);
+      if (initialData.doorNo && !doorNo) setDoorNo(formatDoorNo(initialData.doorNo));
+      if (initialData.street && !street) setStreet(formatAddressText(initialData.street));
+      if (initialData.pinCode && !pincode) setPincode(initialData.pinCode.replace(/\D/g, "").slice(0, 6));
       if (initialData.area && !area) setArea(toTitleCaseSafe(initialData.area));
       if (initialData.taluk && !taluk) setTaluk(toTitleCaseSafe(initialData.taluk));
       if (initialData.city && !city) setCity(toTitleCaseSafe(initialData.city));
@@ -407,11 +407,11 @@ export function RegistrationForm({
       <SectionTitle>Address Details</SectionTitle>
       <div className="grid grid-cols-2 gap-3">
         <Field id="doorNo" label="Door No." required error={touched.doorNo ? fieldErrors.doorNo : undefined}>
-          <Input id="doorNo" value={doorNo} onChange={(e) => setDoorNo(toTitleCase(e.target.value))} onBlur={() => handleBlur("doorNo")}
+          <Input id="doorNo" value={doorNo} onChange={(e) => setDoorNo(formatDoorNo(e.target.value))} onBlur={() => handleBlur("doorNo")}
             disabled={loading} placeholder="12A" className={`h-10 ${touched.doorNo && fieldErrors.doorNo ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`} />
         </Field>
         <Field id="street" label="Street" required error={touched.street ? fieldErrors.street : undefined}>
-          <Input id="street" value={street} onChange={(e) => setStreet(toTitleCase(e.target.value))} onBlur={() => handleBlur("street")}
+          <Input id="street" value={street} onChange={(e) => setStreet(formatAddressText(e.target.value))} onBlur={() => handleBlur("street")}
             disabled={loading} placeholder="Street / Road" className={`h-10 ${touched.street && fieldErrors.street ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`} />
         </Field>
         <Field id="pincode" label="Pincode" required error={touched.pincode ? fieldErrors.pincode : undefined} hint={pincodeError ?? undefined}>
@@ -639,12 +639,12 @@ export function RegistrationForm({
                 </Field>
                 <Field id="firstName-d" label="First Name" required error={touched.firstName ? fieldErrors.firstName : undefined}>
                   <Input id="firstName-d" value={firstName}
-                    onChange={(e) => setFirstName(toTitleCase(e.target.value))} onBlur={() => handleBlur("firstName")}
+                    onChange={(e) => setFirstName(formatName(e.target.value))} onBlur={() => handleBlur("firstName")}
                     disabled={loading} placeholder="First name" className={`h-10 ${touched.firstName && fieldErrors.firstName ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`} />
                 </Field>
                 <Field id="lastName-d" label="Last Name" required error={touched.lastName ? fieldErrors.lastName : undefined}>
                   <Input id="lastName-d" value={lastName}
-                    onChange={(e) => setLastName(toTitleCase(e.target.value))} onBlur={() => handleBlur("lastName")}
+                    onChange={(e) => setLastName(formatName(e.target.value))} onBlur={() => handleBlur("lastName")}
                     disabled={loading} placeholder="Last name" className={`h-10 ${touched.lastName && fieldErrors.lastName ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`} />
                 </Field>
               </div>
@@ -718,12 +718,12 @@ export function RegistrationForm({
                     </Field>
                     <Field id="firstName-m" label="First Name" required error={touched.firstName ? fieldErrors.firstName : undefined}>
                       <Input id="firstName-m" value={firstName}
-                        onChange={(e) => setFirstName(toTitleCase(e.target.value))} onBlur={() => handleBlur("firstName")}
+                        onChange={(e) => setFirstName(formatName(e.target.value))} onBlur={() => handleBlur("firstName")}
                         disabled={loading} placeholder="First name" className={`h-10 ${touched.firstName && fieldErrors.firstName ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`} />
                     </Field>
                     <Field id="lastName-m" label="Last Name" required error={touched.lastName ? fieldErrors.lastName : undefined}>
                       <Input id="lastName-m" value={lastName}
-                        onChange={(e) => setLastName(toTitleCase(e.target.value))} onBlur={() => handleBlur("lastName")}
+                        onChange={(e) => setLastName(formatName(e.target.value))} onBlur={() => handleBlur("lastName")}
                         disabled={loading} placeholder="Last name" className={`h-10 ${touched.lastName && fieldErrors.lastName ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`} />
                     </Field>
                   </div>

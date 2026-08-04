@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { cn, toTitleCase, toTitleCaseSafe } from "@/lib/utils";
+import { cn, toTitleCase, toTitleCaseSafe, formatName, formatAddressText, formatDoorNo } from "@/lib/utils";
 import { AreaCombobox } from "@/components/customer/area-combobox";
 
 // ─── Field wrapper (matches registration-form style) ────────────────────────
@@ -157,13 +157,13 @@ export function TextilesJewelleryCrossForm({
         setTextilesData({
           ...data,
           prefix: toTitleCaseSafe(data.prefix),
-          firstName: toTitleCaseSafe(data.firstName),
-          lastName: toTitleCaseSafe(data.lastName),
+          firstName: formatName(data.firstName),
+          lastName: formatName(data.lastName),
         });
         // Pre-fill all address fields from existing record
-        if (data.doorNo) setDoorNo(toTitleCaseSafe(data.doorNo));
-        if (data.street) setStreet(toTitleCaseSafe(data.street));
-        if (data.pincode) setPincode(data.pincode);
+        if (data.doorNo) setDoorNo(formatDoorNo(data.doorNo));
+        if (data.street) setStreet(formatAddressText(data.street));
+        if (data.pincode) setPincode(data.pincode.replace(/\D/g, "").slice(0, 6));
         if (data.area) setArea(toTitleCaseSafe(data.area));
         if (data.taluk) setTaluk(toTitleCaseSafe(data.taluk));
         if (data.city) setCity(toTitleCaseSafe(data.city));
@@ -351,7 +351,7 @@ export function TextilesJewelleryCrossForm({
           <Input
             id="jcf-doorNo"
             value={doorNo}
-            onChange={(e) => setDoorNo(toTitleCase(e.target.value))} onBlur={() => handleBlur("doorNo")}
+            onChange={(e) => setDoorNo(formatDoorNo(e.target.value))} onBlur={() => handleBlur("doorNo")}
             disabled={submitting}
             placeholder="12A"
             className={`h-10 ${touched.doorNo && fieldErrors.doorNo ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`}
@@ -361,7 +361,7 @@ export function TextilesJewelleryCrossForm({
           <Input
             id="jcf-street"
             value={street}
-            onChange={(e) => setStreet(toTitleCase(e.target.value))} onBlur={() => handleBlur("street")}
+            onChange={(e) => setStreet(formatAddressText(e.target.value))} onBlur={() => handleBlur("street")}
             disabled={submitting}
             placeholder="Street / Road"
             className={`h-10 ${touched.street && fieldErrors.street ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`}
