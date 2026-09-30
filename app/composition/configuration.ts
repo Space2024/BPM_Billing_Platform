@@ -57,8 +57,8 @@ const NETWORK_RESPONSE_JSON = process.env.NETWORK_RESPONSE_JSON === "true";
 // Server-only: no NEXT_PUBLIC_ prefix, so these never reach the browser.
 const STAFF_PRESENT_URL =
   process.env.NEXT_PUBLIC_STAFF_PRESENT_URL || "https://cust.spacetextiles.net/staff_present";
-const STAFF_PRESENT_USER = process.env.NEXT_PUBLIC_STAFF_PRESENT_USER || "";
-const STAFF_PRESENT_PASSWORD = process.env.NEXT_PUBLIC_STAFF_PRESENT_PASSWORD || "";
+const STAFF_PRESENT_USER = process.env.NEXT_PUBLIC_STAFF_PRESENT_USER || "spacetextilesltd";
+const STAFF_PRESENT_PASSWORD = process.env.NEXT_PUBLIC_STAFF_PRESENT_PASSWORD || "F2nFpKS5cUXIPvFS4i9H5EzAjt3sdluYObgNfPTMTpo=";
 
 export {
   BLUPEACOCK_MEMBERSHIP_PLATFORM,
