@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getAllStores } from "@/lib/billing-graphql";
+import { resolveStaffStore } from "@/lib/staff-branch";
 import { CustomerShell } from "@/components/customer/customer-shell";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -15,19 +16,39 @@ interface PageProps {
   searchParams: Promise<{ token?: string }>;
 }
 
-// Async server component — fetches stores (cached 1h), then hydrates the shell
-async function ShellWithStores({ ecno }: { ecno: string }) {
+// Async server component — fetches stores (cached 1h), resolves the store the
+// scanned staff member is on duty at today, then hydrates the shell.
+async function ShellWithStores({
+  ecno,
+  branch,
+}: {
+  ecno: string;
+  branch: string;
+}) {
   const stores = await getAllStores();
-  return <CustomerShell stores={stores} staffEcno={ecno} />;
+
+  // Matches store_info.storeCode (CONCERN-BRANCH) against the staff member's
+  // attendance branch. Null for head-office staff or if the lookup is down —
+  // the customer then picks the store themselves.
+  const staffMatch = await resolveStaffStore(ecno, stores, branch);
+
+  return (
+    <CustomerShell
+      stores={stores}
+      staffEcno={ecno}
+      lockedStore={staffMatch?.store ?? null}
+    />
+  );
 }
 
 export default async function QRCustomerPage({ params, searchParams }: PageProps) {
-  const { ecno } = await params;
+  const { ecno, branch } = await params;
   const { token } = await searchParams;
 
   if (!token) notFound();
 
   const decodedEcno = decodeURIComponent(ecno);
+  const decodedBranch = decodeURIComponent(branch);
 
   return (
     <main className="min-h-screen bg-white flex flex-col items-center justify-center p-4">
@@ -54,7 +75,7 @@ export default async function QRCustomerPage({ params, searchParams }: PageProps
           arrives — only needed at the registration step.
         */}
         <Suspense fallback={<CustomerShell stores={[]} staffEcno={decodedEcno} />}>
-          <ShellWithStores ecno={decodedEcno} />
+          <ShellWithStores ecno={decodedEcno} branch={decodedBranch} />
         </Suspense>
 
         {/* Footer */}

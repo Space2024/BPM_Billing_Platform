@@ -4,7 +4,6 @@ import { useState, useTransition, useEffect } from "react";
 import {
   Phone,
   Loader2,
-  Crown,
   CheckCircle2,
   ArrowLeft,
   Download,
@@ -17,6 +16,7 @@ import { TextilesJewelleryCrossForm } from "@/components/customer/textiles-jewel
 import { useRegistrationFormStore, useCrossFormStore } from "@/lib/store";
 import { OtpPanel } from "@/components/customer/otp-panel";
 import { mobileSchema } from "@/lib/validations/billing";
+import { formatMembershipId } from "@/lib/utils";
 
 import {
   BillingByMobileResult,
@@ -30,7 +30,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,9 +42,16 @@ interface CustomerShellProps {
   stores: StoreOption[];
   /** EC number of the staff member whose QR code was scanned */
   staffEcno?: string;
+  /**
+   * Store matched from store_info.storeCode against the branch the scanned
+   * staff member is on duty at today. When set, the store field is pre-selected
+   * with this store and locked. Null when no branch matched (head office staff,
+   * or the attendance lookup was unavailable) — the customer then picks a store.
+   */
+  lockedStore?: StoreOption | null;
 }
 
-export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
+export function CustomerShell({ stores, staffEcno, lockedStore = null }: CustomerShellProps) {
   // Get clear functions from stores
   const clearRegistrationForm = useRegistrationFormStore((state) => state.clearForm);
   const clearCrossForm = useCrossFormStore((state) => state.clearForm);
@@ -66,6 +72,10 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
   const [pendingUpdatePayload, setPendingUpdatePayload] = useSessionState<Record<string, string> | null>("cs_pendingPayload", null);
   // For jewellery purchase confirmation popup
   const [showJewelleryPopup, setShowJewelleryPopup] = useState(false);
+
+  // The scanned QR belongs to a staff member on duty at a jewellery branch, so
+  // the customer is standing at a jewellery counter being billed.
+  const staffIsJewellery = !!lockedStore?.storeType?.toLowerCase().includes("jewel");
 
   useEffect(() => {
     if (step === "existing_found" && lookupResult) {
@@ -139,22 +149,38 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
           !!texData.doorNo?.trim() &&
           !!texData.city?.trim();
 
-        if (hasJewellery || hasAddress) {
-          // If address is already filled, inject texData into lookupResult so the UI displays correctly
-          const updatedData = { ...data };
-          if (!updatedData.customer) {
-            updatedData.customer = {
-              customerTitle: texData?.prefix || "",
-              customerName: `${texData?.firstName || ""} ${texData?.lastName || ""}`.trim(),
-              mobileNo: mobile,
-              doorNo: texData?.doorNo || "",
-              city: texData?.city || "",
-              status: texData?.billingStatus || "PROCESSING"
-            } as any;
-          } else {
-            updatedData.customer.city = texData?.city || updatedData.customer.city;
-          }
-          setLookupResult(updatedData);
+        // The textiles record supplies a customer block the lookup result may
+        // lack, so the membership card and the cross-over form both have
+        // something to show. Applied only on the routed branches, leaving the
+        // popup path's data exactly as it was.
+        const mergedData = { ...data };
+        if (!mergedData.customer) {
+          mergedData.customer = {
+            customerTitle: texData?.prefix || "",
+            customerName: `${texData?.firstName || ""} ${texData?.lastName || ""}`.trim(),
+            mobileNo: mobile,
+            doorNo: texData?.doorNo || "",
+            city: texData?.city || "",
+            status: texData?.billingStatus || "PROCESSING"
+          } as any;
+        } else {
+          mergedData.customer.city = texData?.city || mergedData.customer.city;
+        }
+
+        if (hasJewellery) {
+          // Already a jewellery customer, so there is nothing to cross over.
+          setLookupResult(mergedData);
+          setStep("existing_found");
+        } else if (staffIsJewellery) {
+          // A jewellery-branch staff QR answers "Purchasing Jewellery?" by
+          // itself, so skip that question and open the cross-over form, which
+          // presets and locks the store for that branch. This also rescues
+          // textiles customers who already have an address: they were shown
+          // their card and could never be given a jewellery store.
+          setLookupResult(mergedData);
+          setStep("textiles_jewellery_cross");
+        } else if (hasAddress) {
+          setLookupResult(mergedData);
           setStep("existing_found");
         } else {
           // Address missing -> ask if purchasing jewellery first
@@ -408,7 +434,6 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
     const displayCity = pc?.city ?? cu?.city ?? "";
     const membershipId = lookupResult.membershipId ?? pc?.membershipId ?? "";
     const level = String(pc?.level || lookupResult.billingStatus || "PROCESSING");
-    const tierGrade = pc?.tierGrade || lookupResult.billingStatus;
     const qrCodeUrl = lookupResult.qrCodeUrl ?? pc?.qrCodeUrl;
 
     // ── Tier config (inline) ────────────────────────────────────────────────
@@ -417,26 +442,14 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
     const isGold = t.includes("GOLD") || t === "A";
     const isSilver = t.includes("SILVER") || t === "B";
     const tierGradient = isPlatinum
-      ? "from-slate-700 via-slate-600 to-slate-800"
-      : isGold ? "from-amber-700 via-yellow-600 to-amber-800"
-        : isSilver ? "from-slate-500 via-slate-400 to-slate-600"
-          : "from-blue-800 via-blue-700 to-blue-900";
-    const tierBadge = isPlatinum
-      ? "bg-slate-400/20 text-slate-100 border-slate-400/40"
-      : isGold ? "bg-amber-300/20 text-amber-100 border-amber-400/40"
-        : isSilver ? "bg-slate-200/20 text-slate-100 border-slate-300/40"
-          : "bg-blue-400/20 text-blue-100 border-blue-400/40";
-    const tierLabel = isPlatinum ? "Platinum"
-      : isGold ? "Gold"
-        : isSilver ? "Silver"
-          : (t === "VERIFIED" || t === "ACTIVE MEMBER") ? "Processing"
-            : tierGrade ? tierGrade
-              : level ? level
-                : "Processing";
-    const tierGlow = isPlatinum ? "shadow-slate-400/30"
-      : isGold ? "shadow-amber-400/30"
-        : isSilver ? "shadow-slate-300/30"
-          : "shadow-blue-400/30";
+      ? "from-[#23262e] via-[#59616f] to-[#101216]"
+      : isGold ? "from-[#412c0b] via-[#c4932c] to-[#1f1404]"
+        : isSilver ? "from-[#333b45] via-[#7c8794] to-[#202730]"
+          : "from-[#131a54] via-[#2a45c4] to-[#06091e]";
+    const tierGlow = isPlatinum ? "shadow-slate-500/40"
+      : isGold ? "shadow-amber-600/40"
+        : isSilver ? "shadow-slate-400/40"
+          : "shadow-blue-700/45";
 
     return (
       <div className="space-y-5 max-w-md mx-auto w-full">
@@ -477,8 +490,8 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
             }}
           />
 
-          {/* Top row: logo + tier badge */}
-          <div className="relative flex items-center justify-between mb-5">
+          {/* Top row: logo */}
+          <div className="relative flex items-center mb-5">
             <img
               src="/blupeacock3.png"
               alt="Logo"
@@ -486,15 +499,6 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
               height={30}
               className="object-contain brightness-0 invert opacity-90"
             />
-            <Badge
-              className={`
-                flex items-center gap-1.5 px-3 py-1 rounded-full
-                text-xs font-semibold border ${tierBadge} backdrop-blur-sm
-              `}
-            >
-              <Crown className="h-3.5 w-3.5" />
-              {tierLabel.toUpperCase()}
-            </Badge>
           </div>
 
           {/* Member name */}
@@ -545,7 +549,7 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
                 Membership ID
               </p>
               <p className="text-2xl font-bold font-mono tracking-wider text-white drop-shadow-sm">
-                {membershipId}
+                {formatMembershipId(membershipId)}
               </p>
             </div>
           )}
@@ -553,17 +557,14 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
           {/* Divider */}
           <div className="relative border-t border-white/20 my-4" />
 
-          {/* Bottom row: mobile + status */}
-          <div className="relative flex items-center justify-between">
+          {/* Bottom row: mobile */}
+          <div className="relative flex items-center">
             <div>
               <p className="text-[10px] uppercase tracking-widest text-white/60">Mobile</p>
               <div className="text-sm font-semibold text-white mt-0.5">
                 <HiddenMobile mobile={mobile} iconClassName="hover:bg-white/20" />
               </div>
             </div>
-            <Badge className="bg-white/10 border-white/20 text-white text-xs px-2 py-0.5 rounded-full">
-              Active Member
-            </Badge>
           </div>
         </div>
 
@@ -614,6 +615,7 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
         mobileNo={mobile}
         stores={stores}
         staffEcno={staffEcno}
+        lockedStore={lockedStore}
         initialData={initialCustomerData}
         initialStoreId={preselectedStoreId}
         isPendingUpdate={isPendingUpdate}
@@ -648,6 +650,7 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
       <TextilesJewelleryCrossForm
         mobileNo={mobile}
         stores={stores}
+        lockedStore={lockedStore}
         isPendingUpdate={isResumingPending}
         onSuccess={(details) => {
           setRegistrationDetails({
@@ -679,7 +682,16 @@ export function CustomerShell({ stores, staffEcno }: CustomerShellProps) {
             setStep("success");
           }
         }}
-        onBack={reset}
+        onBack={() => {
+          // An established customer who decides against jewellery lands back on
+          // their membership card instead of at the start of the flow. Only a
+          // pending resumption has nothing to fall back to.
+          if (!pendingMembershipId && lookupResult) {
+            setStep("existing_found");
+          } else {
+            reset();
+          }
+        }}
       />
     );
   }

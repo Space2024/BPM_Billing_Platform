@@ -41,3 +41,18 @@ export function formatAddressText(value: string | null | undefined): string {
 export function formatDoorNo(value: string | null | undefined): string {
   return value ? toTitleCase(value.replace(DOOR_NO_DISALLOWED, "")) : "";
 }
+
+/**
+ * Spaces a membership number into groups of four, the way an Aadhaar number is
+ * printed, so it can be read aloud or checked against a receipt without losing
+ * your place. A twelve digit id becomes "2627 0007 3210".
+ *
+ * Only a plain digit run is grouped. An id carrying letters or punctuation is
+ * returned untouched, since it has its own formatting.
+ */
+export function formatMembershipId(value: string | null | undefined): string {
+  if (!value) return "";
+  const compact = String(value).replace(/\s+/g, "");
+  if (!/^\d+$/.test(compact)) return String(value);
+  return compact.replace(/(\d{4})(?=\d)/g, "$1 ");
+}

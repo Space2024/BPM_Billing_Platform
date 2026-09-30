@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { Loader2, UserPlus, ArrowRight, ArrowLeft, MapPin } from "lucide-react";
 import { usePincodeLookup } from "@/hooks/use-pincode-lookup";
-import { registrationStep1Schema, registrationFullSchema } from "@/lib/validations/billing";
+import {
+  registrationStep1Schema,
+  registrationFullSchema,
+  PREFIXES,
+  isValidPrefix,
+  normalizePrefix,
+} from "@/lib/validations/billing";
 
 import { StoreCombobox } from "@/components/customer/store-combobox";
 import { createBillingAction } from "@/app/customer/actions";
@@ -31,7 +37,13 @@ import {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const PREFIXES = ["Mr", "Mrs", "Ms", "Dr", "Prof"];
+/**
+ * Fields in error are marked with Tailwind's important prefix, which emits the
+ * class token "!border-red-500". A plain ".border-red-500" class selector does
+ * not match that token, and ".\!border-red-500" needs CSS escaping that is easy
+ * to get wrong, so match on the attribute instead. This covers both spellings.
+ */
+const ERROR_FIELD_SELECTOR = '[class*="border-red-500"]';
 
 function isJewelleryStore(storeType: string) {
   return storeType?.toLowerCase().includes("jewel");
@@ -43,6 +55,13 @@ interface RegistrationFormProps {
   mobileNo: string;
   stores: StoreOption[];
   staffEcno?: string;
+  /**
+   * Store matched from store_info.storeCode against the branch the scanned staff
+   * member is on duty at today. When present the store field is pre-selected
+   * with it and locked, because the branch is a fact about where the customer is
+   * standing, not a choice. Null leaves the store field fully selectable.
+   */
+  lockedStore?: StoreOption | null;
   initialData?: {
     customerTitle?: string | null;
     customerName?: string | null;
@@ -108,6 +127,7 @@ export function RegistrationForm({
   mobileNo,
   stores,
   staffEcno,
+  lockedStore = null,
   onSuccess,
   onBack,
   initialData,
@@ -146,15 +166,22 @@ export function RegistrationForm({
   
   const selectedStore = stores.find(s => s.storeId === selectedStoreId) ?? null;
 
+  // Staff branch decided the store — the field is filled in and not editable.
+  const isStoreLocked = !!lockedStore;
+
   // Initialize from initialData if provided
   useEffect(() => {
-    if (initialStoreId && !selectedStoreId) {
+    // A locked staff-branch store wins over a resumed record's store, so skip
+    // this seed and let the lock effect below set it.
+    if (!lockedStore && initialStoreId && !selectedStoreId) {
       setSelectedStoreId(initialStoreId);
     }
     if (initialData) {
       if (initialData.customerTitle) {
-        const sanitized = sanitizePrefix(initialData.customerTitle);
-        if (sanitized !== prefix) setPrefix(sanitized);
+        // Leaves the field blank when the stored title is not a canonical
+        // prefix, so validation makes the user pick one.
+        const normalized = normalizePrefix(initialData.customerTitle);
+        if (normalized !== prefix) setPrefix(normalized);
       }
       if (initialData.customerName) {
         const parts = initialData.customerName.trim().split(" ");
@@ -174,17 +201,21 @@ export function RegistrationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const sanitizePrefix = (raw: string | null | undefined) => {
-    if (!raw) return "Mr";
-    const cleaned = raw.replace(/\./g, "").trim();
-    const match = PREFIXES.find(p => p.toLowerCase() === cleaned.toLowerCase());
-    return match || "Mr";
-  };
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // ── Staff branch lock ───────────────────────────────────────────────────────
+  // store_info.storeCode matched the branch the scanned staff member is on duty
+  // at, so that store is authoritative. It overrides the value persisted in
+  // sessionStorage and any storeId carried by a resumed billing_pending record.
+  useEffect(() => {
+    if (!lockedStore) return;
+    if (selectedStoreId === lockedStore.storeId) return;
+    setSelectedStoreId(lockedStore.storeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedStore, selectedStoreId]);
 
   const handleBlur = (field: string) => {
     setTouched((prev) => ({ ...prev, [field]: true }));
@@ -218,6 +249,18 @@ export function RegistrationForm({
 
   const showAddress = selectedStore ? isJewelleryStore(selectedStore.storeType) : false;
 
+  // Every option in the dropdown is canonical, so a pick clears the prefix error
+  // straight away instead of waiting for the next validate pass.
+  function handlePrefixChange(value: string) {
+    setPrefix(value);
+    setFieldErrors((prev) => {
+      if (!prev.prefix) return prev;
+      const next = { ...prev };
+      delete next.prefix;
+      return next;
+    });
+  }
+
   function handleStoreChange(storeId: string, store: StoreOption | null) {
     setSelectedStoreId(storeId);
     setError(null);
@@ -227,13 +270,14 @@ export function RegistrationForm({
 
   // Validate step 1 fields (used for mobile "Next" gate)
   function validateStep1(dataOverride?: any, showErrorsAndFocus: boolean = true): boolean {
-    const dataToValidate = dataOverride || { storeId: selectedStoreId, firstName: firstName.trim(), lastName: lastName.trim() };
+    const dataToValidate = dataOverride || { storeId: selectedStoreId, prefix, firstName: firstName.trim(), lastName: lastName.trim() };
     const result = registrationStep1Schema.safeParse(dataToValidate);
     
     if (!result.success) {
       const formatted = result.error.format();
       const errs: Record<string, string> = {};
       if (formatted.storeId?._errors[0]) errs.storeId = formatted.storeId._errors[0];
+      if (formatted.prefix?._errors[0]) errs.prefix = formatted.prefix._errors[0];
       if (formatted.firstName?._errors[0]) errs.firstName = formatted.firstName._errors[0];
       if (formatted.lastName?._errors[0]) errs.lastName = formatted.lastName._errors[0];
       setFieldErrors(errs);
@@ -241,7 +285,7 @@ export function RegistrationForm({
       if (showErrorsAndFocus) {
         setTouched(prev => ({ ...prev, ...Object.fromEntries(Object.keys(errs).map(k => [k, true])) }));
         setTimeout(() => {
-          const els = document.querySelectorAll('.border-red-500');
+          const els = document.querySelectorAll(ERROR_FIELD_SELECTOR);
           for (let i = 0; i < els.length; i++) {
             const el = els[i] as HTMLElement;
             if (el.offsetParent !== null) {
@@ -259,7 +303,7 @@ export function RegistrationForm({
   }
 
   function validateAll(dataOverride?: any, showErrorsAndFocus: boolean = true): boolean {
-    const baseData = { storeId: selectedStoreId, firstName: firstName.trim(), lastName: lastName.trim() };
+    const baseData = { storeId: selectedStoreId, prefix, firstName: firstName.trim(), lastName: lastName.trim() };
     const addressData = { doorNo: doorNo.trim(), street: street.trim(), pincode: pincode.trim(), area: area.trim(), city: city.trim(), state: state.trim() };
     
     const dataToValidate = dataOverride || (showAddress ? { ...baseData, ...addressData } : baseData);
@@ -271,6 +315,7 @@ export function RegistrationForm({
       const formatted = result.error.format() as any;
       const errs: Record<string, string> = {};
       if (formatted.storeId?._errors[0]) errs.storeId = formatted.storeId._errors[0];
+      if (formatted.prefix?._errors[0]) errs.prefix = formatted.prefix._errors[0];
       if (formatted.firstName?._errors[0]) errs.firstName = formatted.firstName._errors[0];
       if (formatted.lastName?._errors[0]) errs.lastName = formatted.lastName._errors[0];
       if (formatted.doorNo?._errors[0]) errs.doorNo = formatted.doorNo._errors[0];
@@ -284,7 +329,7 @@ export function RegistrationForm({
       if (showErrorsAndFocus) {
         setTouched(prev => ({ ...prev, ...Object.fromEntries(Object.keys(errs).map(k => [k, true])) }));
         setTimeout(() => {
-          const els = document.querySelectorAll('.border-red-500');
+          const els = document.querySelectorAll(ERROR_FIELD_SELECTOR);
           for (let i = 0; i < els.length; i++) {
             const el = els[i] as HTMLElement;
             if (el.offsetParent !== null) {
@@ -302,7 +347,7 @@ export function RegistrationForm({
   }
 
   // ── Derived Valid State ───────────────────────────────────────────────────
-  const isStep1Valid = !!(selectedStoreId && firstName.trim() && lastName.trim());
+  const isStep1Valid = !!(selectedStoreId && isValidPrefix(prefix) && firstName.trim() && lastName.trim());
   const isAddressValid = !!(doorNo.trim() && street.trim() && pincode.trim().length === 6 && area.trim());
   const isAllValid = showAddress ? (isStep1Valid && isAddressValid) : isStep1Valid;
 
@@ -321,6 +366,9 @@ export function RegistrationForm({
       const payload: Record<string, string> = {};
       if (firstName.trim() !== (initialData?.customerName?.split(" ")[0] || "")) payload.firstName = firstName.trim();
       if (lastName.trim() !== (initialData?.customerName?.split(" ").slice(1).join(" ") || "")) payload.lastName = lastName.trim();
+      // A prefix the user had to correct in order to pass validation must reach
+      // the server, otherwise the correction is demanded and then discarded.
+      if (prefix !== normalizePrefix(initialData?.customerTitle)) payload.prefix = prefix;
       if (selectedStoreId && selectedStoreId !== initialStoreId) payload.storeId = selectedStoreId;
       if (doorNo.trim() !== (initialData?.doorNo || "")) payload.doorNo = doorNo.trim();
       if (street.trim() !== (initialData?.street || "")) payload.street = street.trim();
@@ -347,6 +395,9 @@ export function RegistrationForm({
       const payload: Record<string, string> = {};
       if (firstName.trim() !== (initialData?.customerName?.split(" ")[0] || "")) payload.firstName = firstName.trim();
       if (lastName.trim() !== (initialData?.customerName?.split(" ").slice(1).join(" ") || "")) payload.lastName = lastName.trim();
+      // A prefix the user had to correct in order to pass validation must reach
+      // the server, otherwise the correction is demanded and then discarded.
+      if (prefix !== normalizePrefix(initialData?.customerTitle)) payload.prefix = prefix;
       if (selectedStoreId && selectedStoreId !== initialStoreId) payload.storeId = selectedStoreId;
       if (doorNo.trim() !== (initialData?.doorNo || "")) payload.doorNo = doorNo.trim();
       if (street.trim() !== (initialData?.street || "")) payload.street = street.trim();
@@ -604,12 +655,19 @@ export function RegistrationForm({
             <Field id="store-select-d" label="Store" required error={touched.storeId ? fieldErrors.storeId : undefined}>
               <StoreCombobox
                 stores={stores}
-                value={selectedStoreId}
+                value={lockedStore ? lockedStore.storeId : selectedStoreId}
                 onChange={handleStoreChange}
-                disabled={loading}
+                disabled={loading || isStoreLocked}
                 placeholder="Search and select a store..."
                 error={touched.storeId ? !!fieldErrors.storeId : false}
               />
+              {isStoreLocked && (
+                <div className="flex items-center mt-1.5">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-0">
+                    Staff branch · {lockedStore?.storeCode}
+                  </Badge>
+                </div>
+              )}
               {selectedStore && showAddress && (
                 <div className="flex items-center mt-1.5">
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -625,10 +683,10 @@ export function RegistrationForm({
             <div className="space-y-4">
               <SectionTitle>Personal Details</SectionTitle>
               <div className="grid grid-cols-3 gap-3">
-                <Field id="prefix-d" label="Prefix" required>
-                  <Select value={prefix} onValueChange={setPrefix} disabled={loading}>
-                    <SelectTrigger id="prefix-d" className="h-10">
-                      <SelectValue />
+                <Field id="prefix-d" label="Prefix" required error={touched.prefix ? fieldErrors.prefix : undefined}>
+                  <Select value={prefix} onValueChange={handlePrefixChange} disabled={loading}>
+                    <SelectTrigger id="prefix-d" className={`h-10 ${touched.prefix && fieldErrors.prefix ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`}>
+                      <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
                       {PREFIXES.map((p) => (
@@ -681,12 +739,19 @@ export function RegistrationForm({
               <Field id="store-select-m" label="Store" required error={touched.storeId ? fieldErrors.storeId : undefined}>
                 <StoreCombobox
                   stores={stores}
-                  value={selectedStoreId}
+                  value={lockedStore ? lockedStore.storeId : selectedStoreId}
                   onChange={handleStoreChange}
-                  disabled={loading}
+                  disabled={loading || isStoreLocked}
                   placeholder="Search and select a store..."
                   error={touched.storeId ? !!fieldErrors.storeId : false}
                 />
+                {isStoreLocked && (
+                  <div className="flex items-center mt-1.5">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-0">
+                      Staff branch · {lockedStore?.storeCode}
+                    </Badge>
+                  </div>
+                )}
                 {selectedStore && showAddress && (
                   <div className="flex items-center mt-1.5">
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -704,10 +769,10 @@ export function RegistrationForm({
                 <div className="space-y-4">
                   <SectionTitle>Personal Details</SectionTitle>
                   <div className="grid grid-cols-3 gap-3">
-                    <Field id="prefix-m" label="Prefix" required>
-                      <Select value={prefix} onValueChange={setPrefix} disabled={loading}>
-                        <SelectTrigger id="prefix-m" className="h-10">
-                          <SelectValue />
+                    <Field id="prefix-m" label="Prefix" required error={touched.prefix ? fieldErrors.prefix : undefined}>
+                      <Select value={prefix} onValueChange={handlePrefixChange} disabled={loading}>
+                        <SelectTrigger id="prefix-m" className={`h-10 ${touched.prefix && fieldErrors.prefix ? "!border-2 !border-red-500 focus-visible:!ring-red-500/20" : ""}`}>
+                          <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
                           {PREFIXES.map((p) => (

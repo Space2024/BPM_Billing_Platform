@@ -58,6 +58,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 interface TextilesJewelleryCrossFormProps {
   mobileNo: string;
   stores: StoreOption[];
+  /**
+   * Store matched from store_info.storeCode against the branch the scanned staff
+   * member is on duty at today. Only takes effect here when that branch store is
+   * itself a jewellery store — a textiles branch cannot dictate the jewellery
+   * pick, so the customer keeps choosing in that case.
+   */
+  lockedStore?: StoreOption | null;
   /** Called once on mount — used to auto-resend OTP for billing_pending resumption */
   onMounted?: () => void | Promise<void>;
   /** When true, show Update & Verify OTP button instead of Submit Details */
@@ -79,6 +86,7 @@ interface TextilesJewelleryCrossFormProps {
 export function TextilesJewelleryCrossForm({
   mobileNo,
   stores,
+  lockedStore = null,
   onMounted,
   onSuccess,
   onBack,
@@ -126,6 +134,23 @@ export function TextilesJewelleryCrossForm({
 
   // Only jewellery stores in combobox
   const jewStores = stores.filter((s) => s.storeType?.toLowerCase().includes("jewel"));
+
+  // ── Staff branch lock ───────────────────────────────────────────────────────
+  // Applies only if the staff member's own branch store sells jewellery.
+  const lockedJewStore =
+    lockedStore && lockedStore.storeType?.toLowerCase().includes("jewel")
+      ? lockedStore
+      : null;
+  const isJewStoreLocked = !!lockedJewStore;
+
+  // The branch store is authoritative: it overrides the sessionStorage value and
+  // any jewStoreId already carried by the customer's textiles record.
+  useEffect(() => {
+    if (!lockedJewStore) return;
+    if (selectedJewStoreId === lockedJewStore.storeId) return;
+    setSelectedJewStoreId(lockedJewStore.storeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedJewStore, selectedJewStoreId]);
 
   // Available areas from pincode lookup
   const [availableAreas, setAvailableAreas] = useState<string[]>([]);
@@ -524,12 +549,19 @@ export function TextilesJewelleryCrossForm({
             <Field id="jcf-store-d" label="Jewellery Store" required error={touched.storeId ? fieldErrors.storeId : undefined}>
               <StoreCombobox
                 stores={jewStores}
-                value={selectedJewStoreId}
+                value={lockedJewStore ? lockedJewStore.storeId : selectedJewStoreId}
                 onChange={(storeId) => setSelectedJewStoreId(storeId)}
-                disabled={submitting}
+                disabled={submitting || isJewStoreLocked}
                 placeholder="Search jewellery store..."
                 error={touched.storeId ? !!fieldErrors.storeId : false}
               />
+              {isJewStoreLocked && (
+                <div className="flex items-center mt-1.5">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-0">
+                    Staff branch · {lockedJewStore?.storeCode}
+                  </Badge>
+                </div>
+              )}
             </Field>
           </div>
         </div>
@@ -595,12 +627,19 @@ export function TextilesJewelleryCrossForm({
               <Field id="jcf-store-m" label="Jewellery Store" required error={touched.storeId ? fieldErrors.storeId : undefined}>
                 <StoreCombobox
                   stores={jewStores}
-                  value={selectedJewStoreId}
+                  value={lockedJewStore ? lockedJewStore.storeId : selectedJewStoreId}
                   onChange={(storeId) => setSelectedJewStoreId(storeId)}
-                  disabled={submitting}
+                  disabled={submitting || isJewStoreLocked}
                   placeholder="Search jewellery store..."
                   error={touched.storeId ? !!fieldErrors.storeId : false}
                 />
+                {isJewStoreLocked && (
+                  <div className="flex items-center mt-1.5">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-0">
+                      Staff branch · {lockedJewStore?.storeCode}
+                    </Badge>
+                  </div>
+                )}
               </Field>
             </div>
           </>

@@ -20,8 +20,42 @@ const NAME_MESSAGE = "Only letters and . , @ are allowed";
 const ADDRESS_MESSAGE = "Only letters, numbers and . , @ are allowed";
 const DOOR_NO_MESSAGE = "Only letters, numbers and . , @ / - are allowed";
 
+// ─── Title Prefix ─────────────────────────────────────────────────────────────
+// The only titles the billing platform accepts. Nothing else may be submitted:
+// not a blank, and not a value carried in from an older customer record such as
+// "Selvan" or "Thiru". Such a value has to be corrected by the user, because
+// substituting a default would register the customer under the wrong title.
+
+export const PREFIXES = ["Mr", "Mrs", "Ms", "Dr", "Prof"] as const;
+
+export type Prefix = (typeof PREFIXES)[number];
+
+const PREFIX_MESSAGE = `Select a valid prefix: ${PREFIXES.join(", ")}`;
+
+export const prefixSchema = z.enum(PREFIXES, { message: PREFIX_MESSAGE });
+
+/** True only for an exact, canonical prefix. */
+export function isValidPrefix(value: string | null | undefined): value is Prefix {
+  return !!value && (PREFIXES as readonly string[]).includes(value);
+}
+
+/**
+ * Map a stored title onto its canonical prefix, tolerating case and a trailing
+ * dot so "mr." resolves to "Mr".
+ *
+ * Returns "" when the value cannot be mapped. That empty result is deliberate:
+ * it leaves the field unset so strict validation reports it, rather than
+ * silently substituting a default and hiding bad data.
+ */
+export function normalizePrefix(raw: string | null | undefined): Prefix | "" {
+  if (!raw) return "";
+  const cleaned = raw.replace(/\./g, "").trim();
+  return PREFIXES.find((p) => p.toLowerCase() === cleaned.toLowerCase()) ?? "";
+}
+
 // Personal Details Schema
 export const personalDetailsSchema = z.object({
+  prefix: prefixSchema,
   firstName: z.string().min(1, "First name is required").regex(NAME_PATTERN, NAME_MESSAGE),
   lastName: z.string().min(1, "Last name is required").regex(NAME_PATTERN, NAME_MESSAGE),
 });

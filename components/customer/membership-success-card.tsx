@@ -3,9 +3,9 @@ import Image from "next/image";
 import { Crown, Star, Shield, Gem, ArrowLeft, Loader2, Download, Verified } from "lucide-react";
 import { fetchProxyImageBase64 } from "@/app/customer/actions";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { VerifyBillingResult } from "@/types/billing";
 import { HiddenMobile } from "@/components/customer/hidden-mobile";
+import { formatMembershipId } from "@/lib/utils";
 
 // ─── Tier config ───────────────────────────────────────────────────────────────
 
@@ -22,33 +22,33 @@ export function getTierConfig(tier: string | null | undefined): TierConfig {
   if (t.includes("PLATINUM"))
     return {
       label: "PLATINUM",
-      gradient: "from-slate-700 via-slate-600 to-slate-800",
+      gradient: "from-[#23262e] via-[#59616f] to-[#101216]",
       badgeBg: "bg-slate-400/20 text-slate-100 border-slate-400/40",
       icon: <Gem className="h-4 w-4" />,
-      glow: "shadow-slate-400/30",
+      glow: "shadow-slate-500/40",
     };
   if (t.includes("GOLD") || t === "A")
     return {
       label: tier ? tier.toUpperCase() : "GOLD",
-      gradient: "from-amber-700 via-yellow-600 to-amber-800",
+      gradient: "from-[#412c0b] via-[#c4932c] to-[#1f1404]",
       badgeBg: "bg-amber-300/20 text-amber-100 border-amber-400/40",
       icon: <Crown className="h-4 w-4" />,
-      glow: "shadow-amber-400/30",
+      glow: "shadow-amber-600/40",
     };
   if (t.includes("SILVER") || t === "B")
     return {
       label: tier ? tier.toUpperCase() : "SILVER",
-      gradient: "from-slate-500 via-slate-400 to-slate-600",
+      gradient: "from-[#333b45] via-[#7c8794] to-[#202730]",
       badgeBg: "bg-slate-200/20 text-slate-100 border-slate-300/40",
       icon: <Star className="h-4 w-4" />,
-      glow: "shadow-slate-300/30",
+      glow: "shadow-slate-400/40",
     };
   return {
     label: (t === "VERIFIED" || !tier || tier.length >= 12) ? "PROCESSING" : tier.toUpperCase(),
-    gradient: "from-blue-800 via-blue-700 to-blue-900",
+    gradient: "from-[#131a54] via-[#2a45c4] to-[#06091e]",
     badgeBg: "bg-blue-400/20 text-blue-100 border-blue-400/40",
     icon: <Shield className="h-4 w-4" />,
-    glow: "shadow-blue-400/30",
+    glow: "shadow-blue-700/45",
   };
 }
 
@@ -134,8 +134,8 @@ export function MembershipSuccessCard({ result, customerName, customerCity, onRe
           }}
         />
 
-        {/* Top row: brand logo + tier badge */}
-        <div className="relative flex items-center justify-between mb-5">
+        {/* Top row: brand logo */}
+        <div className="relative flex items-center mb-5">
           <Image
             src="/blupeacock3.png"
             alt="Logo"
@@ -143,15 +143,6 @@ export function MembershipSuccessCard({ result, customerName, customerCity, onRe
             height={30}
             className="object-contain brightness-0 invert opacity-90"
           />
-          <Badge
-            className={`
-              flex items-center gap-1.5 px-3 py-1 rounded-full
-              text-xs font-semibold border ${tier.badgeBg} backdrop-blur-sm
-            `}
-          >
-            {tier.icon}
-            {tier.label}
-          </Badge>
         </div>
 
         {/* Customer Name & City */}
@@ -201,27 +192,21 @@ export function MembershipSuccessCard({ result, customerName, customerCity, onRe
             Membership ID
           </p>
           <p className="text-3xl font-bold font-mono tracking-wider text-white drop-shadow-sm">
-            {result.membershipId}
+            {formatMembershipId(result.membershipId)}
           </p>
         </div>
 
         {/* Divider */}
         <div className="relative border-t border-white/20 my-4" />
 
-        {/* Bottom row: mobile + status */}
-        <div className="relative flex items-center justify-between">
+        {/* Bottom row: mobile */}
+        <div className="relative flex items-center">
           <div>
             <p className="text-[10px] uppercase tracking-widest text-white/60">Mobile</p>
             <div className="text-sm font-semibold text-white mt-0.5">
               <HiddenMobile mobile={result.mobileNo ?? ""} iconClassName="hover:bg-white/20" />
             </div>
           </div>
-          {/* {result.billingStatus && ( */}
-            <Badge className="bg-white/10 border-white/20 text-white text-xs px-2 py-0.5 rounded-full uppercase tracking-wider">
-            Active Member
-              {/* {result.billingStatus} */}
-            </Badge>
-          {/*  )}*/}
         </div>
       </div>
 
