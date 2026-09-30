@@ -26,11 +26,11 @@
 // open rather than blocking registration on an attendance lookup.
 
 import { StoreOption } from "@/types/billing";
-
-const STAFF_PRESENT_URL =
-  process.env.STAFF_PRESENT_URL || "https://cust.spacetextiles.net/staff_present";
-const STAFF_PRESENT_USER = process.env.STAFF_PRESENT_USER || "";
-const STAFF_PRESENT_PASSWORD = process.env.STAFF_PRESENT_PASSWORD || "";
+import {
+  STAFF_PRESENT_URL,
+  STAFF_PRESENT_USER,
+  STAFF_PRESENT_PASSWORD,
+} from "@/app/composition/configuration";
 
 /** Per-request timeout for a single attendance probe. */
 const PROBE_TIMEOUT_MS = 8000;

@@ -1,7 +1,13 @@
 import { EmployeeData, ApiResponse } from "@/types/employee";
+import {
+  BLUPEACOCK_EMPLOYEE_DIRECTORY,
+  BLUPEACOCK_EMPLOYEE_DIRECTORY_TOKEN,
+} from "@/app/composition/configuration";
 
-const API_URL = "https://servicehub.spacetextiles.net/parkingsystem/v1/Parking-tcs-employee-data/";
-const AUTH_TOKEN = "d74e48fa5689bf56d3b63cffcd20e7b4e7399488";
+// Endpoint and token come from the composition layer, so nothing here reads
+// process.env or carries a hardcoded address.
+const API_URL = BLUPEACOCK_EMPLOYEE_DIRECTORY;
+const AUTH_TOKEN = BLUPEACOCK_EMPLOYEE_DIRECTORY_TOKEN;
 
 export async function fetchEmployeeData(ecno: string): Promise<EmployeeData> {
     try {

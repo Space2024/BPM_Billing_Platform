@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { getAllStores } from "@/lib/billing-graphql";
+import { fetchStores } from "@/app/apollo/hooks/stores/fetch-stores-server";
 import { resolveStaffStore } from "@/lib/staff-branch";
 import { CustomerShell } from "@/components/customer/customer-shell";
 import { Separator } from "@/components/ui/separator";
@@ -25,7 +25,7 @@ async function ShellWithStores({
   ecno: string;
   branch: string;
 }) {
-  const stores = await getAllStores();
+  const stores = await fetchStores();
 
   // Matches store_info.storeCode (CONCERN-BRANCH) against the staff member's
   // attendance branch. Null for head-office staff or if the lookup is down —
