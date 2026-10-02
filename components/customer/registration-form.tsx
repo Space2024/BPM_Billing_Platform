@@ -661,13 +661,13 @@ export function RegistrationForm({
                 placeholder="Search and select a store..."
                 error={touched.storeId ? !!fieldErrors.storeId : false}
               />
-              {isStoreLocked && (
+              {/* {isStoreLocked && (
                 <div className="flex items-center mt-1.5">
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-0">
                     Staff branch · {lockedStore?.storeCode}
                   </Badge>
                 </div>
-              )}
+              )}  */}
               {selectedStore && showAddress && (
                 <div className="flex items-center mt-1.5">
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
