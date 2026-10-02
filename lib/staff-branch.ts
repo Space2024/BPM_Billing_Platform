@@ -30,7 +30,7 @@ import {
   STAFF_PRESENT_URL,
   STAFF_PRESENT_USER,
   STAFF_PRESENT_PASSWORD,
-} from "@/app/composition/configuration";
+} from "@/app/composition/staff-configuration";
 
 /** Per-request timeout for a single attendance probe. */
 const PROBE_TIMEOUT_MS = 8000;
@@ -223,7 +223,7 @@ export async function resolveStaffStore(
   const auth = authHeader();
   if (!auth) {
     console.warn(
-      "resolveStaffStore: STAFF_PRESENT_USER / STAFF_PRESENT_PASSWORD are not set — skipping branch lock."
+      "resolveStaffStore: staff attendance credentials are not set (NEXT_PUBLIC_STAFF_PRESENT_USER / NEXT_PUBLIC_STAFF_PRESENT_PASSWORD) — skipping branch lock."
     );
     return null;
   }

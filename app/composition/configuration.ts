@@ -54,11 +54,9 @@ const GATEWAY_ALLOW_GRAPHQL = process.env.GATEWAY_ALLOW_GRAPHQL === "true";
  */
 const NETWORK_RESPONSE_JSON = process.env.NETWORK_RESPONSE_JSON === "true";
 
-// Server-only: no NEXT_PUBLIC_ prefix, so these never reach the browser.
-const STAFF_PRESENT_URL =
-  process.env.NEXT_PUBLIC_STAFF_PRESENT_URL || "https://cust.spacetextiles.net/staff_present";
-const STAFF_PRESENT_USER = process.env.NEXT_PUBLIC_STAFF_PRESENT_USER || "spacetextilesltd";
-const STAFF_PRESENT_PASSWORD = process.env.NEXT_PUBLIC_STAFF_PRESENT_PASSWORD || "F2nFpKS5cUXIPvFS4i9H5EzAjt3sdluYObgNfPTMTpo=";
+// Staff attendance settings live in staff-configuration.ts, which is
+// server-only. This file reaches the browser through the employee form, so the
+// attendance password must never be read here.
 
 export {
   BLUPEACOCK_MEMBERSHIP_PLATFORM,
@@ -66,9 +64,6 @@ export {
   BLUPEACOCK_MEMBERSHIP_EMPOWERMENT,
   BLUPEACOCK_EMPLOYEE_DIRECTORY,
   BLUPEACOCK_EMPLOYEE_DIRECTORY_TOKEN,
-  STAFF_PRESENT_URL,
-  STAFF_PRESENT_USER,
-  STAFF_PRESENT_PASSWORD,
   NETWORK_RESPONSE_JSON,
   GATEWAY_ALLOW_GRAPHQL,
 };
@@ -79,9 +74,6 @@ const appConfig: AppConfig = {
   BLUPEACOCK_MEMBERSHIP_EMPOWERMENT,
   BLUPEACOCK_EMPLOYEE_DIRECTORY,
   BLUPEACOCK_EMPLOYEE_DIRECTORY_TOKEN,
-  STAFF_PRESENT_URL,
-  STAFF_PRESENT_USER,
-  STAFF_PRESENT_PASSWORD,
 };
 
 export default appConfig;
