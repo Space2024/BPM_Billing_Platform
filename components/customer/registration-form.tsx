@@ -83,7 +83,7 @@ interface RegistrationFormProps {
   pendingMembershipId?: string | null;
   /** Called with the diff payload when user clicks Update & Verify */
   onRequestUpdate?: (payload: Record<string, string>) => void;
-  onSuccess: (result: CreateBillingResult, details: { firstName: string; lastName: string; prefix: string; city: string }) => void;
+  onSuccess: (result: CreateBillingResult, details: { firstName: string; lastName: string; prefix: string; city: string; hasAddress: boolean }) => void;
   onBack: () => void;
 }
 
@@ -448,6 +448,9 @@ export function RegistrationForm({
       lastName: lastName.trim(),
       prefix,
       city: showAddress ? city.trim() : (selectedStore?.location || ""),
+      // Only jewellery stores collect an address. For a textiles store the city
+      // above is the store's location, not the customer's, so it proves nothing.
+      hasAddress: !!(showAddress && doorNo.trim() && city.trim()),
     });
   }
 

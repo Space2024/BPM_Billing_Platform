@@ -35,6 +35,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
 import { MembershipSuccessCard, getTierConfig } from "@/components/customer/membership-success-card";
 import { HiddenMobile } from "@/components/customer/hidden-mobile";
+import { KycLink } from "@/components/customer/kyc-link";
 import { useSessionState } from "@/components/customer/use-session-state";
 import { notify } from "@/components/ui/notifications";
 
@@ -62,7 +63,7 @@ export function CustomerShell({ stores, staffEcno, lockedStore = null }: Custome
   const [lookupResult, setLookupResult] = useSessionState<BillingByMobileResult | null>("cs_lookup", null);
   const [createResult, setCreateResult] = useSessionState<CreateBillingResult | null>("cs_create", null);
   const [verifyResult, setVerifyResult] = useSessionState<VerifyBillingResult | null>("cs_verify", null);
-  const [registrationDetails, setRegistrationDetails] = useSessionState<{ firstName: string; lastName: string; prefix: string; city: string } | null>("cs_reg", null);
+  const [registrationDetails, setRegistrationDetails] = useSessionState<{ firstName: string; lastName: string; prefix: string; city: string; hasAddress?: boolean } | null>("cs_reg", null);
   const [qrLoaded, setQrLoaded] = useState(false);
   const [proxyQrUrl, setProxyQrUrl] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -220,7 +221,7 @@ export function CustomerShell({ stores, staffEcno, lockedStore = null }: Custome
 
   function handleRegistrationSuccess(
     result: CreateBillingResult,
-    details: { firstName: string; lastName: string; prefix: string; city: string }
+    details: { firstName: string; lastName: string; prefix: string; city: string; hasAddress: boolean }
   ) {
     setCreateResult(result);
     setRegistrationDetails(details);
@@ -435,6 +436,10 @@ export function CustomerShell({ stores, staffEcno, lockedStore = null }: Custome
     const membershipId = lookupResult.membershipId ?? pc?.membershipId ?? "";
     const level = String(pc?.level || lookupResult.billingStatus || "PROCESSING");
     const qrCodeUrl = lookupResult.qrCodeUrl ?? pc?.qrCodeUrl;
+    // KYC needs an address on file, so the link is only offered once there is one.
+    const addressDoorNo = pc?.doorNo || cu?.doorNo || lookupResult.doorNo || "";
+    const addressCity = pc?.city || cu?.city || lookupResult.city || "";
+    const hasAddress = !!(addressDoorNo.trim() && addressCity.trim());
 
     // ── Tier config (inline) ────────────────────────────────────────────────
     const t = level.toUpperCase();
@@ -575,6 +580,8 @@ export function CustomerShell({ stores, staffEcno, lockedStore = null }: Custome
           </p>
         </div>
 
+        {hasAddress && <KycLink mobile={mobile} />}
+
         <Button variant="outline" onClick={reset} className="w-full h-10 text-sm gap-2 border-slate-200">
           <ArrowLeft className="h-4 w-4" />
           Search Another
@@ -658,6 +665,7 @@ export function CustomerShell({ stores, staffEcno, lockedStore = null }: Custome
             lastName: details.lastName,
             prefix: details.prefix,
             city: details.city,
+            hasAddress: details.hasAddress,
           });
 
           if (isResumingPending) {
@@ -743,7 +751,7 @@ export function CustomerShell({ stores, staffEcno, lockedStore = null }: Custome
 
     return (
       <div className="max-w-md mx-auto w-full">
-        <MembershipSuccessCard result={verifyResult} onReset={reset} customerName={fullName} customerCity={registrationDetails?.city} />
+        <MembershipSuccessCard result={verifyResult} onReset={reset} customerName={fullName} customerCity={registrationDetails?.city} showKyc={!!registrationDetails?.hasAddress} />
       </div>
     );
   }

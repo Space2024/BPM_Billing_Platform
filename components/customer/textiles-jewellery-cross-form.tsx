@@ -75,6 +75,7 @@ interface TextilesJewelleryCrossFormProps {
     lastName: string;
     prefix: string;
     city: string;
+    hasAddress: boolean;
     tierGrade?: string | null;
     qrCodeUrl?: string | null;
   }) => void;
@@ -333,6 +334,7 @@ export function TextilesJewelleryCrossForm({
       lastName: textilesData?.lastName || "",
       prefix: textilesData?.prefix || "",
       city: city.trim(),
+      hasAddress: !!(doorNo.trim() && city.trim()),
       tierGrade: data?.tierGrade || textilesData?.billingStatus || null,
       qrCodeUrl: data?.qrCodeUrl || null,
     });

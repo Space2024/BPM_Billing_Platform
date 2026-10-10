@@ -5,6 +5,7 @@ import { fetchProxyImageBase64 } from "@/app/customer/actions";
 import { Button } from "@/components/ui/button";
 import { VerifyBillingResult } from "@/types/billing";
 import { HiddenMobile } from "@/components/customer/hidden-mobile";
+import { KycLink } from "@/components/customer/kyc-link";
 import { formatMembershipId } from "@/lib/utils";
 
 // ─── Tier config ───────────────────────────────────────────────────────────────
@@ -58,10 +59,12 @@ interface MembershipSuccessCardProps {
   result: VerifyBillingResult;
   customerName?: string;
   customerCity?: string;
+  /** Offer the KYC link. Only when the customer has an address on file. */
+  showKyc?: boolean;
   onReset: () => void;
 }
 
-export function MembershipSuccessCard({ result, customerName, customerCity, onReset }: MembershipSuccessCardProps) {
+export function MembershipSuccessCard({ result, customerName, customerCity, showKyc = false, onReset }: MembershipSuccessCardProps) {
   const [qrLoaded, setQrLoaded] = useState(false);
   const [proxyQrUrl, setProxyQrUrl] = useState<string | null>(null);
   const tier = getTierConfig(result.tierGrade);
@@ -218,6 +221,8 @@ export function MembershipSuccessCard({ result, customerName, customerCity, onRe
       </div>
 
       {/* Loyalty Note was moved to the top */}
+
+      {showKyc && <KycLink mobile={result.mobileNo} />}
 
       <Button
         variant="outline"
